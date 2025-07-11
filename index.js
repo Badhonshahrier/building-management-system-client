@@ -1,6 +1,6 @@
 const express = require('express');
 const cors = require('cors')
-const { MongoClient, ServerApiVersion } = require('mongodb');
+const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 const app = express()
 require('dotenv').config()
 const port = process.env.PORT || 3000
@@ -26,6 +26,9 @@ async function run() {
     await client.connect();
 
     const apartInfoCollection = client.db("apartment").collection("apartInfo")
+    const agreementCollection = client.db("apartment").collection("agreements")
+    const usersCollection = client.db("apartment").collection
+      ("users")
 
 
     app.get("/apartinfo", async (req, res) => {
@@ -34,7 +37,43 @@ async function run() {
     })
 
 
+    app.post('/agreement', async (req, res) => {
+      const data = req.body;
+      const existing = await agreementCollection.findOne({ userEmail: data.userEmail });
+      const result = await agreementCollection.insertOne(data);
+      res.send(result);
+    });
 
+    // users collection
+    app.post('/users', async (req, res) => {
+      const user = req.body;
+      const result = await usersCollection.insertOne(user);
+      res.send(result);
+    });
+
+    // user get
+    app.get('/users', async (req, res) => {
+      const result = await usersCollection.find().toArray();
+      res.send(result);
+    });
+    // role checked
+    app.get('/users/role/:email', async (req, res) => {
+      const email = req.params.email
+      const user = await usersCollection.findOne({ email })
+      res.send(user)
+    })
+    // role status changed
+    app.patch("/users/role-user/:id", async (req, res) => {
+      const id = req.params.id
+      const filter = { _id: new ObjectId(id) }
+      const updateDoc = {
+        $set: {
+          role: "user"
+        }
+      }
+      const result = await usersCollection.updateOne(filter, updateDoc);
+      res.send(result);
+    })
 
 
 
