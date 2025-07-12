@@ -29,6 +29,7 @@ async function run() {
     const agreementCollection = client.db("apartment").collection("agreements")
     const usersCollection = client.db("apartment").collection
       ("users")
+    const paymentCollection=client.db("apartment").collection("payment")
 
 
     app.get("/apartinfo", async (req, res) => {
@@ -74,8 +75,51 @@ async function run() {
       const result = await usersCollection.updateOne(filter, updateDoc);
       res.send(result);
     })
+    // agreement req get
+    app.get('/agreements', async (req, res) => {
+      const result = await agreementCollection.find().toArray()
+      res.send(result)
+    })
+    // request accept
+    app.patch('/agreements/accept/:id', async (req, res) => {
+      const id = req.params.id;
+      const agreement = await agreementCollection.findOne({ _id: new ObjectId(id) });
+      const userUpdate = await usersCollection.updateOne(
+        { email: agreement.userEmail },
+        { $set: { role: "member" } }
+      );
+      const agreementUpdate = await agreementCollection.updateOne(
+        { _id: new ObjectId(id) },
+        { $set: { status: "checked" } }
+      );
+      res.send({ userUpdate, agreementUpdate });
+    });
 
 
+    // accept reject
+    app.patch('/agreements/reject/:id', async (req, res) => {
+      const id = req.params.id;
+      const result = await agreementCollection.deleteOne({ _id: new ObjectId(id) });
+      res.send(result);
+    });
+
+    // agreement get
+    app.get('/agreements/user/:email', async (req, res) => {
+      const email = req.params.email;
+      const result = await agreementCollection.find({
+        userEmail: email,
+        status: "checked"
+      }).toArray();
+      res.send(result);
+    });
+    // rent payment
+    app.post('/payments', async (req, res) => {
+      const payment = req.body;
+      const result = await paymentCollection.insertOne(payment);
+      res.send(result);
+    });
+    // user get
+    
 
 
 
