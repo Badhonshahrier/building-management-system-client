@@ -29,7 +29,9 @@ async function run() {
     const agreementCollection = client.db("apartment").collection("agreements")
     const usersCollection = client.db("apartment").collection
       ("users")
-    const paymentCollection=client.db("apartment").collection("payment")
+    const paymentCollection = client.db("apartment").collection("payment")
+    const announcementCollection = client.db("apartment").collection('announcement')
+    const addCouponCollection = client.db('apartment').collection("addCoupons")
 
 
     app.get("/apartinfo", async (req, res) => {
@@ -51,6 +53,18 @@ async function run() {
       const result = await usersCollection.insertOne(user);
       res.send(result);
     });
+
+    // announcement post
+    app.post('/announcement', async (req, res) => {
+      const announce = req.body
+      const result = await announcementCollection.insertOne(announce)
+      res.send(result)
+    })
+    app.get('/announce',async(req,res)=>{
+      const result=await announcementCollection.find().toArray()
+      res.send(result)
+    })
+
 
     // user get
     app.get('/users', async (req, res) => {
@@ -118,8 +132,45 @@ async function run() {
       const result = await paymentCollection.insertOne(payment);
       res.send(result);
     });
-    // user get
-    
+    // coupon post
+    app.post("/addcoupons", async (req, res) => {
+      const newCoupon = req.body;
+      const result = await addCouponCollection.insertOne(newCoupon);
+      res.send(result)
+    });
+    // get coupons
+
+    app.get('/addcoupons', async (req, res) => {
+      const result = await addCouponCollection.find().toArray();
+      res.send(result);
+
+    });
+
+
+
+    app.get('/addcoupons/:code', async (req, res) => {
+      const code = req.query.code;
+      const result = await addCouponCollection.findOne({ code: code });
+      res.send(result);
+    });
+
+    // stripe payment
+    app.get('/apartinfo/:id', async (req, res) => {
+      try {
+        const id = req.params.id;
+        const apartment = await apartInfoCollection.findOne({
+          _id: new ObjectId(id)
+        });
+
+        if (!apartment) {
+          return res.status(404).send({ message: "Apartment not found" });
+        }
+
+        res.send(apartment);
+      } catch (error) {
+        res.status(500).send({ message: "Server Error", error: error.message });
+      }
+    });
 
 
 
