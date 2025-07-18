@@ -3,6 +3,7 @@ const cors = require('cors')
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 const app = express()
 require('dotenv').config()
+const stripe = require("stripe")("sk_test_51ReqVcI0N7JLD0W3LBH0NXzJlaUoCO87FXMRDizn4ZUqM3UZHlH20O23PH6swVLUmWxKUbKG2AZpxGeIrV2VQ2pd00eyzCxWjB")
 const port = process.env.PORT || 3000
 
 app.use(cors())
@@ -60,8 +61,8 @@ async function run() {
       const result = await announcementCollection.insertOne(announce)
       res.send(result)
     })
-    app.get('/announce',async(req,res)=>{
-      const result=await announcementCollection.find().toArray()
+    app.get('/announce', async (req, res) => {
+      const result = await announcementCollection.find().toArray()
       res.send(result)
     })
 
@@ -149,7 +150,7 @@ async function run() {
 
 
     app.get('/addcoupons/:code', async (req, res) => {
-      const code = req.query.code;
+      const code = req.params.code;
       const result = await addCouponCollection.findOne({ code: code });
       res.send(result);
     });
@@ -170,6 +171,21 @@ async function run() {
       } catch (error) {
         res.status(500).send({ message: "Server Error", error: error.message });
       }
+    });
+
+
+    // payment intent apis create
+    app.post('/create-payment-intent', async (req, res) => {
+      const { price } = req.body;
+      const amount = parseInt(price * 100)
+      const paymentIntent = await stripe.paymentIntents.create({
+        amount,
+        currency: 'BDT',
+        payment_method_types: ['card'],
+      });
+      res.send({
+        clientSecret: paymentIntent.client_secret,
+      })
     });
 
 
