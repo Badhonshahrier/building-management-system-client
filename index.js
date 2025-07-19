@@ -1,10 +1,13 @@
 const express = require('express');
 const cors = require('cors')
+const admin = require("firebase-admin");
+const serviceAccount = require("./building-management-firebase-adminsdk-fbsvc.json");
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 const app = express()
 require('dotenv').config()
-const stripe = require("stripe")("sk_test_51ReqVcI0N7JLD0W3LBH0NXzJlaUoCO87FXMRDizn4ZUqM3UZHlH20O23PH6swVLUmWxKUbKG2AZpxGeIrV2VQ2pd00eyzCxWjB")
+const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY)
 const port = process.env.PORT || 3000
+
 
 app.use(cors())
 app.use(express.json())
@@ -20,6 +23,40 @@ const client = new MongoClient(uri, {
     deprecationErrors: true,
   }
 });
+
+
+
+admin.initializeApp({
+  credential: admin.credential.cert(serviceAccount)
+});
+
+
+
+
+
+// Middleware
+const verifyToken = async (req, res, next) => {
+  const authHeader = req.headers?.authorization;
+  if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    return res.status(401).send({ message: "Unauthorized" });
+  }
+
+  const token = authHeader.split(" ")[1];
+  try {
+    const decoded = await admin.auth().verifyIdToken(token);
+    req.decoded = decoded;
+    next();
+  } catch (error) {
+    return res.status(403).send({ message: "Forbidden", error });
+  }
+};
+
+
+
+
+
+
+
 
 async function run() {
   try {
@@ -41,7 +78,10 @@ async function run() {
     })
 
 
-    app.post('/agreement', async (req, res) => {
+    app.post('/agreement', verifyToken, async (req, res) => {
+      if (email !== req.decoded.email) {
+        return res.status(403).message({ message: 'forbidden access' })
+      }
       const data = req.body;
       const existing = await agreementCollection.findOne({ userEmail: data.userEmail });
       const result = await agreementCollection.insertOne(data);
@@ -73,7 +113,10 @@ async function run() {
       res.send(result);
     });
     // role checked
-    app.get('/users/role/:email', async (req, res) => {
+    app.get('/users/role/:email', verifyToken, async (req, res) => {
+      if (email !== req.decoded.email) {
+        return res.status(403).message({ message: 'forbidden access' })
+      }
       const email = req.params.email
       const user = await usersCollection.findOne({ email })
       res.send(user)
@@ -91,13 +134,17 @@ async function run() {
       res.send(result);
     })
     // agreement req get
-    app.get('/agreements', async (req, res) => {
+    app.get('/agreements', verifyToken, async (req, res) => {
+
       const result = await agreementCollection.find().toArray()
       res.send(result)
     })
     // request accept
-    app.patch('/agreements/accept/:id', async (req, res) => {
+    app.patch('/agreements/accept/:id', verifyToken, async (req, res) => {
       const id = req.params.id;
+      if (email !== req.decoded.email) {
+        return res.status(403).message({ message: 'forbidden access' })
+      }
       const agreement = await agreementCollection.findOne({ _id: new ObjectId(id) });
       const userUpdate = await usersCollection.updateOne(
         { email: agreement.userEmail },
@@ -119,8 +166,12 @@ async function run() {
     });
 
     // agreement get
-    app.get('/agreements/user/:email', async (req, res) => {
+    app.get('/agreements/user/:email', verifyToken, async (req, res) => {
+
       const email = req.params.email;
+      if (email !== req.decoded.email) {
+        return res.status(403).message({ message: 'forbidden access' })
+      }
       const result = await agreementCollection.find({
         userEmail: email,
         status: "checked"
@@ -149,20 +200,20 @@ async function run() {
 
 
     // Coupon status update route (admin can change availability)
-app.patch("/addcoupons/:id", async (req, res) => {
-  const id = req.params.id;
-  const { status } = req.body;
+    app.patch("/addcoupons/:id", async (req, res) => {
+      const id = req.params.id;
+      const { status } = req.body;
 
-  try {
-    const result = await addCouponCollection.updateOne(
-      { _id: new ObjectId(id) },
-      { $set: { status } }
-    );
-    res.send(result);
-  } catch (error) {
-    res.status(500).send({ message: "Failed to update coupon status", error });
-  }
-});
+      try {
+        const result = await addCouponCollection.updateOne(
+          { _id: new ObjectId(id) },
+          { $set: { status } }
+        );
+        res.send(result);
+      } catch (error) {
+        res.status(500).send({ message: "Failed to update coupon status", error });
+      }
+    });
 
 
 
@@ -206,12 +257,15 @@ app.patch("/addcoupons/:id", async (req, res) => {
     });
 
     // payment history get apis
-    app.get('/paymenthistory', async (req, res) => {
-  const email = req.query.email;
-  const query = email ? { email } : {};
-  const result = await paymentCollection.find(query).toArray();
-  res.send(result);
-});
+    app.get('/paymenthistory', verifyToken, async (req, res) => {
+      const email = req.query.email;
+      if (email !== req.decoded.email) {
+        return res.status(403).message({ message: 'forbidden access' })
+      }
+      const query = email ? { email } : {};
+      const result = await paymentCollection.find(query).toArray();
+      res.send(result);
+    });
 
 
 
