@@ -81,6 +81,9 @@ async function run() {
     app.post('/agreement', verifyToken, async (req, res) => {
       const data = req.body;
       const existing = await agreementCollection.findOne({ userEmail: data.userEmail });
+      if (existing) {
+        return res.status(400).send({ message: 'Agreement already submitted by this user.' });
+      }
       const result = await agreementCollection.insertOne(data);
       res.send(result);
     });
@@ -111,9 +114,9 @@ async function run() {
     });
     // role checked
     app.get('/users/role/:email', verifyToken, async (req, res) => {
-     
+
       const email = req.params.email
-       if (email !== req.decoded.email) {
+      if (email !== req.decoded.email) {
         return res.status(403).message({ message: 'forbidden access' })
       }
       const user = await usersCollection.findOne({ email })
