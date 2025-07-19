@@ -79,9 +79,6 @@ async function run() {
 
 
     app.post('/agreement', verifyToken, async (req, res) => {
-      if (email !== req.decoded.email) {
-        return res.status(403).message({ message: 'forbidden access' })
-      }
       const data = req.body;
       const existing = await agreementCollection.findOne({ userEmail: data.userEmail });
       const result = await agreementCollection.insertOne(data);
@@ -114,10 +111,11 @@ async function run() {
     });
     // role checked
     app.get('/users/role/:email', verifyToken, async (req, res) => {
-      if (email !== req.decoded.email) {
+     
+      const email = req.params.email
+       if (email !== req.decoded.email) {
         return res.status(403).message({ message: 'forbidden access' })
       }
-      const email = req.params.email
       const user = await usersCollection.findOne({ email })
       res.send(user)
     })
@@ -142,9 +140,6 @@ async function run() {
     // request accept
     app.patch('/agreements/accept/:id', verifyToken, async (req, res) => {
       const id = req.params.id;
-      if (email !== req.decoded.email) {
-        return res.status(403).message({ message: 'forbidden access' })
-      }
       const agreement = await agreementCollection.findOne({ _id: new ObjectId(id) });
       const userUpdate = await usersCollection.updateOne(
         { email: agreement.userEmail },
