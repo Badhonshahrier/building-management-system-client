@@ -148,6 +148,23 @@ async function run() {
     });
 
 
+    // Coupon status update route (admin can change availability)
+app.patch("/addcoupons/:id", async (req, res) => {
+  const id = req.params.id;
+  const { status } = req.body;
+
+  try {
+    const result = await addCouponCollection.updateOne(
+      { _id: new ObjectId(id) },
+      { $set: { status } }
+    );
+    res.send(result);
+  } catch (error) {
+    res.status(500).send({ message: "Failed to update coupon status", error });
+  }
+});
+
+
 
     app.get('/addcoupons/:code', async (req, res) => {
       const code = req.params.code;
