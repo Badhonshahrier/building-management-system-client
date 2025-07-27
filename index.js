@@ -23,17 +23,9 @@ const client = new MongoClient(uri, {
     deprecationErrors: true,
   }
 });
-
-
-
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccount)
 });
-
-
-
-
-
 // Middleware
 const verifyToken = async (req, res, next) => {
   const authHeader = req.headers?.authorization;
@@ -50,13 +42,6 @@ const verifyToken = async (req, res, next) => {
     return res.status(403).send({ message: "Forbidden", error });
   }
 };
-
-
-
-
-
-
-
 
 async function run() {
   try {
@@ -264,9 +249,6 @@ async function run() {
       const result = await paymentCollection.find(query).toArray();
       res.send(result);
     });
-
-
-
 
     // Send a ping to confirm a successful connection
     // await client.db("admin").command({ ping: 1 });
