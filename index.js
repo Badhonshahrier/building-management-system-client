@@ -46,7 +46,7 @@ const verifyToken = async (req, res, next) => {
 async function run() {
   try {
     // Connect the client to the server	(optional starting in v4.7)
-    // await client.connect();
+    await client.connect();
 
     const apartInfoCollection = client.db("apartment").collection("apartInfo")
     const agreementCollection = client.db("apartment").collection("agreements")
@@ -65,7 +65,12 @@ async function run() {
 
     app.post('/agreement', verifyToken, async (req, res) => {
       const data = req.body;
-      const existing = await agreementCollection.findOne({ userEmail: data.userEmail });
+      // const existing = await agreementCollection.findOne({ userEmail: data.userEmail });
+      const existing = await agreementCollection.findOne({
+        userEmail: data.userEmail,
+        apartmentNo: data.apartmentNo
+      });
+
       if (existing) {
         return res.status(400).send({ message: 'Agreement already submitted by this user.' });
       }
